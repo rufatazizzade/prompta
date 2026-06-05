@@ -1,0 +1,446 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── AUTH MODELS ──────────────────────────────────────────────
+
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
+  emailVerified  DateTime?
+  hashedPassword String?
+  image          String?
+  role           String    @default("user") // user | admin | champion
+  department     String?
+  skillLevel     String    @default("beginner") // beginner | intermediate | advanced
+  xp             Int       @default(0)
+  level          Int       @default(1)
+  bio            String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
+  submissions       Submission[]
+  reviewsGiven      Review[]         @relation("ReviewerReviews")
+  reviewsReceived   Review[]         @relation("ReviewedUserReviews")
+  achievements      UserAchievement[]
+  prompts           Prompt[]
+  articles          KnowledgeArticle[]
+  comments          Comment[]
+  likes             Like[]
+  bookmarks         Bookmark[]
+  champion          Champion?
+  wasteMetrics      WasteMetric[]
+  userProgress      UserProgress[]
+  battleParticipant BattleParticipant[]
+  battleVotes       BattleVote[]
+  questionsAsked    ChampionQuestion[] @relation("QuestionAsker")
+  following         ChampionFollow[]
+  tasksCreated      Task[]             @relation("TaskCreator")
+  sprintContributions SprintContribution[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── DEPARTMENT ──────────────────────────────────────────────
+
+model Department {
+  id    String @id @default(cuid())
+  name  String @unique
+  icon  String @default("building")
+  color String @default("#6366f1")
+
+  learningPaths     LearningPath[]
+  simulatorScenarios SimulatorScenario[]
+}
+
+// ─── TASK SYSTEM ─────────────────────────────────────────────
+
+model Task {
+  id              String   @id @default(cuid())
+  title           String
+  description     String
+  expectedOutcome String
+  aiTools         String   // JSON array of tool names
+  difficulty      String   @default("beginner") // beginner | intermediate | advanced | expert
+  xpReward        Int      @default(50)
+  department      String?
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  createdBy   User?        @relation("TaskCreator", fields: [createdById], references: [id])
+  submissions Submission[]
+}
+
+model Submission {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  content   String
+  links     String?  // JSON array
+  files     String?  // JSON array of file paths
+  status    String   @default("submitted") // not_started | in_progress | submitted | reviewed | completed
+  xpEarned  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task    Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews Review[]
+}
+
+// ─── PEER REVIEW ─────────────────────────────────────────────
+
+model Review {
+  id             String   @id @default(cuid())
+  submissionId   String
+  reviewerId     String
+  reviewedUserId String
+  strengths      String
+  weaknesses     String
+  improvements   String
+  helpful        Boolean?
+  createdAt      DateTime @default(now())
+
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  reviewer     User       @relation("ReviewerReviews", fields: [reviewerId], references: [id])
+  reviewedUser User       @relation("ReviewedUserReviews", fields: [reviewedUserId], references: [id])
+}
+
+// ─── GAMIFICATION ────────────────────────────────────────────
+
+model Achievement {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+  icon        String @default("trophy")
+  xpRequired  Int    @default(0)
+  category    String @default("general") // general | learning | tasks | reviews | knowledge | social
+
+  users UserAchievement[]
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  earnedAt      DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+}
+
+// ─── KNOWLEDGE HUB ───────────────────────────────────────────
+
+model KnowledgeArticle {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  category  String   // HR | Marketing | Finance | Operations | Sales | Support
+  type      String   @default("tutorial") // tutorial | workflow | case_study | prompt | tip
+  authorId  String
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments  Comment[]
+  likes     Like[]
+  bookmarks Bookmark[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  articleId String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  article KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  articleId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  article KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, userId])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  articleId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  article KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, userId])
+}
+
+// ─── PROMPT MARKETPLACE ──────────────────────────────────────
+
+model Prompt {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  useCase     String
+  aiTool      String   // ChatGPT | Claude | Gemini | Perplexity | Copilot
+  category    String   // HR | Marketing | Finance | Operations | Sales | Support
+  successRate Float    @default(0)
+  rating      Float    @default(0)
+  ratingCount Int      @default(0)
+  cloneCount  Int      @default(0)
+  creatorId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+}
+
+// ─── AI CHAMPIONS ────────────────────────────────────────────
+
+model Champion {
+  id             String @id @default(cuid())
+  userId         String @unique
+  department     String
+  specialization String
+  followersCount Int    @default(0)
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions ChampionQuestion[]
+  followers ChampionFollow[]
+}
+
+model ChampionQuestion {
+  id         String   @id @default(cuid())
+  championId String
+  askerId    String
+  question   String
+  answer     String?
+  createdAt  DateTime @default(now())
+
+  champion Champion @relation(fields: [championId], references: [id], onDelete: Cascade)
+  asker    User     @relation("QuestionAsker", fields: [askerId], references: [id])
+}
+
+model ChampionFollow {
+  id         String   @id @default(cuid())
+  championId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  champion Champion @relation(fields: [championId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([championId, userId])
+}
+
+// ─── AI SIMULATOR ────────────────────────────────────────────
+
+model SimulatorScenario {
+  id           String @id @default(cuid())
+  title        String
+  description  String
+  department   String
+  departmentId String?
+  difficulty   String @default("intermediate")
+  timeLimit    Int    @default(30) // minutes
+  context      String // Scenario context/background
+  objectives   String // JSON array of objectives
+  idealAnswer  String // What the ideal approach looks like
+
+  departmentRel Department? @relation(fields: [departmentId], references: [id])
+}
+
+// ─── AI DETECTIVE ────────────────────────────────────────────
+
+model DetectiveChallenge {
+  id          String @id @default(cuid())
+  title       String
+  description String
+  content     String // The AI-generated output to analyze
+  issues      String // JSON array of { type, location, explanation }
+  difficulty  String @default("beginner")
+  xpReward    Int    @default(30)
+  category    String @default("hallucination") // hallucination | bias | missing_source | weak_prompt | misinformation
+}
+
+// ─── AI BATTLE ───────────────────────────────────────────────
+
+model Battle {
+  id           String   @id @default(cuid())
+  title        String
+  challenge    String
+  status       String   @default("active") // active | voting | completed
+  bonusXp      Int      @default(100)
+  createdAt    DateTime @default(now())
+  endsAt       DateTime
+
+  participants BattleParticipant[]
+  votes        BattleVote[]
+}
+
+model BattleParticipant {
+  id         String  @id @default(cuid())
+  battleId   String
+  userId     String
+  submission String?
+  isWinner   Boolean @default(false)
+
+  battle Battle @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([battleId, userId])
+}
+
+model BattleVote {
+  id            String   @id @default(cuid())
+  battleId      String
+  participantId String
+  voterId       String
+  createdAt     DateTime @default(now())
+
+  battle Battle @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  voter  User   @relation(fields: [voterId], references: [id])
+
+  @@unique([battleId, voterId])
+}
+
+// ─── WASTE TRACKER ───────────────────────────────────────────
+
+model WasteMetric {
+  id           String   @id @default(cuid())
+  userId       String
+  date         DateTime @default(now())
+  toolUsed     String
+  taskType     String
+  success      Boolean  @default(true)
+  timeSpent    Int      @default(0) // minutes
+  timeSaved    Int      @default(0) // minutes
+  queriesCount Int      @default(1)
+  department   String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── LEARNING PATHS ──────────────────────────────────────────
+
+model LearningPath {
+  id           String  @id @default(cuid())
+  title        String
+  description  String
+  department   String
+  departmentId String?
+  levels       String  // JSON array of levels with lessons
+  totalLevels  Int     @default(4)
+
+  departmentRel Department?    @relation(fields: [departmentId], references: [id])
+  userProgress  UserProgress[]
+}
+
+model UserProgress {
+  id               String   @id @default(cuid())
+  userId           String
+  pathId           String
+  currentLevel     Int      @default(1)
+  completedLessons String   @default("[]") // JSON array of lesson IDs
+  startedAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  path LearningPath @relation(fields: [pathId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pathId])
+}
+
+// ─── AI RECOMMENDATIONS LOG ─────────────────────────────────
+
+model AIRecommendation {
+  id              String   @id @default(cuid())
+  taskDescription String
+  recommendedTool String
+  reason          String
+  promptTemplate  String
+  alternatives    String   // JSON array
+  timeSavings     String?
+  difficulty      String?
+  userId          String?
+  createdAt       DateTime @default(now())
+}
+
+// ─── COLLABORATIVE AI HACKATHONS / SPRINTS ───────────────────
+
+model HackathonSprint {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+  status        String   @default("active") // active | completed
+  targetScore   Int      @default(5000)
+  startDate     DateTime @default(now())
+  endDate       DateTime
+
+  contributions SprintContribution[]
+}
+
+model SprintContribution {
+  id           String   @id @default(cuid())
+  sprintId     String
+  userId       String
+  department   String
+  pointsEarned Int      @default(50)
+  promptUsed   String
+  createdAt    DateTime @default(now())
+
+  sprint HackathonSprint @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
