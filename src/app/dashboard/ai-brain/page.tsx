@@ -20,6 +20,7 @@ import {
   Check,
   User,
   Building,
+  Database,
 } from "lucide-react";
 import { getToolColor } from "@/lib/utils";
 
@@ -27,7 +28,7 @@ import { getToolColor } from "@/lib/utils";
 interface GraphNode {
   id: string;
   label: string;
-  type: "department" | "user" | "prompt";
+  type: "department" | "user" | "prompt" | "project" | "file_cluster";
   color: string;
   x: number;
   y: number;
@@ -126,6 +127,32 @@ const INITIAL_NODES: GraphNode[] = [
     details: "Screens resume text against role requirements.",
     promptContent: "Evaluate this candidate's CV against our job descriptions and provide a match percentage: [CV]"
   },
+
+  // CLI Integration Nodes (Cyan for Project, Orange for File Clusters)
+  {
+    id: "proj-cli-connect",
+    label: "CLI: Prompta-CLI",
+    type: "project",
+    color: "#06b6d4",
+    x: 200,
+    y: 220,
+    vx: 0,
+    vy: 0,
+    radius: 20,
+    details: "External CLI workspace indexed locally at /Users/admin/projects/prompta-cli."
+  },
+  {
+    id: "cluster-cli-files",
+    label: "Source Files Cluster",
+    type: "file_cluster",
+    color: "#ff7a00",
+    x: 250,
+    y: 270,
+    vx: 0,
+    vy: 0,
+    radius: 15,
+    details: "Ingested codebase context chunk including src/index.ts and src/utils/auth.ts."
+  }
 ];
 
 const INITIAL_LINKS: GraphLink[] = [
@@ -140,6 +167,11 @@ const INITIAL_LINKS: GraphLink[] = [
   { source: "prompt-vlookup", target: "dept-fin" },
   { source: "prompt-resume", target: "dept-hr" },
   
+  // CLI Ingestion links
+  { source: "proj-cli-connect", target: "dept-ops" },
+  { source: "cluster-cli-files", target: "proj-cli-connect" },
+  { source: "cluster-cli-files", target: "prompt-vlookup" },
+
   // Cross-dept flows
   { source: "dept-mktg", target: "dept-sales" },
   { source: "dept-fin", target: "dept-ops" },
@@ -496,6 +528,22 @@ export default function CompanyAIBrainPage() {
                     <div className="flex gap-2 items-center bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-3">
                       <Building className="h-4 w-4 text-emerald-500" />
                       <span className="text-xs font-semibold text-emerald-500">Corporate Innovation Node</span>
+                    </div>
+                  )}
+
+                  {/* If selected node is project */}
+                  {selectedNode.type === "project" && (
+                    <div className="flex gap-2 items-center bg-cyan-500/5 border border-cyan-500/10 rounded-lg p-3">
+                      <Building className="h-4 w-4 text-cyan-500" />
+                      <span className="text-xs font-semibold text-cyan-500">CLI Indexed Project Workspace</span>
+                    </div>
+                  )}
+
+                  {/* If selected node is file_cluster */}
+                  {selectedNode.type === "file_cluster" && (
+                    <div className="flex gap-2 items-center bg-orange-500/5 border border-orange-500/10 rounded-lg p-3">
+                      <Database className="h-4 w-4 text-orange-500" />
+                      <span className="text-xs font-semibold text-orange-500">CLI Context File Cluster</span>
                     </div>
                   )}
                 </motion.div>

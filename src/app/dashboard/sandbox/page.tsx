@@ -18,8 +18,8 @@ import { scanForPII, redactPII, getPIIWarningMessage } from "@/lib/security";
 
 const AVAILABLE_MODELS = [
   { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B", provider: "Meta", speed: "Very Fast" },
-  { id: "mixtral-8x7b-32768", name: "Mixtral 8x7B", provider: "Mistral", speed: "Fast" },
-  { id: "gemma2-9b-it", name: "Gemma 2 9B", provider: "Google", speed: "Ultra Fast" },
+  { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B", provider: "Meta", speed: "Ultra Fast" },
+  { id: "qwen/qwen3-32b", name: "Qwen 3 32B", provider: "Alibaba", speed: "Fast" },
 ];
 
 export default function SandboxPage() {
@@ -33,7 +33,7 @@ export default function SandboxPage() {
   const [loadingA, setLoadingA] = useState(false);
 
   // Model B settings & results (split-screen mode)
-  const [modelB, setModelB] = useState("mixtral-8x7b-32768");
+  const [modelB, setModelB] = useState("llama-3.1-8b-instant");
   const [outputB, setOutputB] = useState("");
   const [evalB, setEvalB] = useState<any>(null);
   const [loadingB, setLoadingB] = useState(false);

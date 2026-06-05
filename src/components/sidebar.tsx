@@ -28,6 +28,7 @@ import {
   LogOut,
   Flame,
   Settings,
+  Terminal,
   type LucideIcon,
 } from "lucide-react";
 import { NAV_ITEMS, ADMIN_NAV_ITEMS } from "@/lib/constants";
@@ -53,6 +54,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   "bar-chart": BarChart,
   flame: Flame,
   settings: Settings,
+  terminal: Terminal,
 };
 
 function NavIcon({ name, className }: { name: string; className?: string }) {

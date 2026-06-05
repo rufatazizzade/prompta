@@ -9,6 +9,15 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log("Cleaning up database...");
+  await prisma.apiKey.deleteMany();
+  await prisma.cliAuditLog.deleteMany();
+  await prisma.fileChunk.deleteMany();
+  await prisma.contextSnapshot.deleteMany();
+  await prisma.project.deleteMany();
+  await prisma.promptOptimization.deleteMany();
+  await prisma.aIWorkflowPattern.deleteMany();
+  await prisma.sprintContribution.deleteMany();
+  await prisma.hackathonSprint.deleteMany();
   await prisma.wasteMetric.deleteMany();
   await prisma.battleVote.deleteMany();
   await prisma.battleParticipant.deleteMany();
@@ -457,6 +466,155 @@ async function main() {
         promptUsed: "VBA script to parse logistics invoice anomalies: [code]",
       },
     ],
+  });
+
+  console.log("Seeding CLI API Keys...");
+  const adminId = users.find((u) => u.email === "admin@prompta.com")!.id;
+  const userId = users.find((u) => u.email === "user@prompta.com")!.id;
+  const championId = users.find((u) => u.email === "champion@prompta.com")!.id;
+
+  const adminKey = await prisma.apiKey.create({
+    data: {
+      key: "gsk_cli_admin_secret_key_12345",
+      name: "Default Admin CLI Key",
+      userId: adminId,
+    },
+  });
+
+  const userKey = await prisma.apiKey.create({
+    data: {
+      key: "gsk_cli_user_secret_key_67890",
+      name: "Personal Laptop CLI Key",
+      userId: userId,
+    },
+  });
+
+  console.log("Seeding CLI Projects and Chunks...");
+  const project1 = await prisma.project.create({
+    data: {
+      name: "Prompta-CLI",
+      userId: adminId,
+      path: "/Users/admin/projects/prompta-cli",
+    },
+  });
+
+  const project2 = await prisma.project.create({
+    data: {
+      name: "Logistics-Audit",
+      userId: userId,
+      path: "/Users/user/dev/logistics-audit",
+    },
+  });
+
+  // Seed File Chunks
+  await prisma.fileChunk.createMany({
+    data: [
+      {
+        projectId: project1.id,
+        filePath: "src/index.ts",
+        content: "import { Command } from 'commander';\nconst program = new Command();\nprogram.version('1.0.0');",
+        tokenCount: 45,
+      },
+      {
+        projectId: project1.id,
+        filePath: "src/utils/auth.ts",
+        content: "export function getHeaders(apiKey: string) { return { 'x-api-key': apiKey }; }",
+        tokenCount: 22,
+      },
+      {
+        projectId: project2.id,
+        filePath: "src/parser.py",
+        content: "def parse_invoice(file_path):\n    # Extract invoice info\n    pass",
+        tokenCount: 30,
+      },
+    ],
+  });
+
+  // Seed Context Snapshot
+  await prisma.contextSnapshot.create({
+    data: {
+      projectId: project1.id,
+      query: "how to parse commander arguments",
+      compressedContext: "[File: src/index.ts]\nimport { Command } from 'commander';\nconst program = new Command();",
+      tokenCount: 15,
+    },
+  });
+
+  console.log("Seeding CLI Prompt Optimizations...");
+  await prisma.promptOptimization.createMany({
+    data: [
+      {
+        userId: adminId,
+        originalPrompt: "write a python function to parse csv and print average of columns",
+        optimizedPrompt: "Act as a Python developer. Write a highly optimized function using pandas to read a CSV and output column averages: [csv_path]",
+        savingsPercentage: 35.5,
+        tokensSaved: 120,
+      },
+      {
+        userId: userId,
+        originalPrompt: "make a typescript interface for user details including name age email status",
+        optimizedPrompt: "Generate a clean TypeScript interface for a User object with name (string), age (number), email (string), and status (enum):",
+        savingsPercentage: 25.0,
+        tokensSaved: 85,
+      },
+    ],
+  });
+
+  console.log("Seeding CLI Workflow Ingestion Patterns...");
+  await prisma.aIWorkflowPattern.createMany({
+    data: [
+      {
+        userId: adminId,
+        patternType: "code_generation",
+        steps: JSON.stringify(["Identify context chunks", "Request Llama 3.3 code generation", "Execute local linting check"]),
+        successRate: 94.5,
+        usageCount: 28,
+        department: "Operations",
+      },
+      {
+        userId: championId,
+        patternType: "refactoring",
+        steps: JSON.stringify(["Extract target function context", "Query Qwen Coder model", "Run diff patch application"]),
+        successRate: 88.0,
+        usageCount: 15,
+        department: "Marketing",
+      },
+    ],
+  });
+
+  console.log("Seeding Token Savings WasteMetrics...");
+  // Inject some token-related metrics into WasteMetric
+  const tokenStats = [
+    { tool: "ChatGPT", task: "Code Generation", before: 4500, after: 1200, efficiency: 73.3, saved: 15 },
+    { tool: "Claude", task: "Context Analysis", before: 8000, after: 2400, efficiency: 70.0, saved: 30 },
+    { tool: "Qwen", task: "Refactoring", before: 3000, after: 800, efficiency: 73.3, saved: 10 },
+    { tool: "Gemini", task: "Code Generation", before: 5000, after: 1500, efficiency: 70.0, saved: 20 },
+  ];
+
+  const wasteEntries = [];
+  const baseDate = new Date();
+  for (let i = 15; i >= 0; i--) {
+    const stat = tokenStats[i % tokenStats.length];
+    const date = new Date(baseDate.getTime() - i * 24 * 60 * 60 * 1000);
+    const success = Math.random() > 0.1;
+    wasteEntries.push({
+      userId: adminId,
+      date,
+      toolUsed: stat.tool,
+      taskType: stat.task,
+      success,
+      timeSpent: Math.floor(Math.random() * 20) + 5,
+      timeSaved: success ? stat.saved : 0,
+      queriesCount: Math.floor(Math.random() * 3) + 1,
+      department: "Operations",
+      tokensBefore: stat.before,
+      tokensAfter: stat.after,
+      efficiency: stat.efficiency,
+    });
+  }
+
+  await prisma.wasteMetric.createMany({
+    data: wasteEntries,
   });
 
   console.log("Database seeded successfully!");

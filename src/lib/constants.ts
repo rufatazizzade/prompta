@@ -69,6 +69,7 @@ export const NAV_ITEMS = [
   { href: "/dashboard/battle", label: "AI Battle", icon: "swords" },
   { href: "/dashboard/waste-tracker", label: "Waste Tracker", icon: "bar-chart-3" },
   { href: "/dashboard/ai-brain", label: "Company AI Brain", icon: "brain" },
+  { href: "/dashboard/cli", label: "CLI Connect", icon: "terminal" },
 ] as const;
 
 export const ADMIN_NAV_ITEMS = [
