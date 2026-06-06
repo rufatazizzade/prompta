@@ -1,7 +1,7 @@
 # 1. Install dependencies only when needed
 FROM node:20-alpine AS deps
-# Add libc6-compat for native compile compatibilities
-RUN apk add --no-cache libc6-compat
+# Add libc6-compat and compile tools for native addon (better-sqlite3) support
+RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
 # Copy package descriptors and lockfile
